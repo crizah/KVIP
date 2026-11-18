@@ -395,3 +395,39 @@ Formula: loaded = (Tokens >= 20,000) OR (running + 2×waiting >= 8)
 ```
 CGO_LDFLAGS="-L./binary" go build -o binary/proxy . 2>&1
 CGO_LDFLAGS="-L./binary" LD_LIBRARY_PATH=./binary CONFIG_PATH=../../config.json ./binary/proxy
+
+
+TODO: have a batch_delete_v1 (have it subscribe to the same zmq path the proxy subscribes to, and this evicts the in memeory key value map on the source) local_keys is exactly hash → (k_ptr, v_ptr, elem_bytes)
+
+okay so a design decision im not super sure on:
+- the proxy already contains the hashes and the nodes that contain them via zmq events
+- what we are doing is, upon every pull request, we are running a batch_exists. this guys checks a local table on the sourc that contains the actual key:value and tensors where this cache is stored on the CPU
+- we then pull based on this mem address we just got
+- batch_set_v1 sets this map when we get new cache on CPU
+
+issues:
+1. 2 sources of truth (even tho we have recompute fallbacks)
+2. eating up mem on CPU
+3. the most important one: eviction policy. to have this eviction policy on this second node, we need to have our agent subscribe to the same zmq event that the proxy subscribes to -> decode hash -> evict. not evicting isnt a correctness issue because we only send a req in the first place of the proxy believes this node has it, since proxy's table is updated, only edge cases fall through where we might visit this path, and even then, if the keys dont exist, we do a recomputation. 
+4. but its just the 2 sources of truth thats bothering me. on the other hand, if we had the proxy itself save the memory addr of the blocks, thats HEAVY coupling and idk does sglang move shit around? plus, the cache events dont give u the mem addr, ill have to make another call for it so....
+
+for now, i am going with the 2 source of truth design cos() its cleaner. but we need an eviction policy for this to ever work as anything but an exp
+
+- also, make the launch script to start sg lang with ts
+
+```
+ --port {sglang_port}
+ --page-size {page_size}                        # from models[model].page_size
+ --kv-events-zmq-addr {ip}:{kv_events_port}    # proxy subscribes to this
+ --load-balance-zmq-addr {ip}:{load_port}       # proxy subscribes to this
+ --cpu-offload-gb {N}                           # not in config.json yet
+ --mem-fraction-static {N}                      # not in config.json yet
+ --hicache-storage-backend dynamic
+ --hicache-storage-backend-extra-config '{"self_name": "A", "config_path": "...", "interface_v1": 1}'
+ --model {model_path}
+```
+
+- also, make sure our routing algo takes into account the current load + the queued load
+- so next we just have to make an interface out of the routing logic to have round robin and cacheroute
+- and also, we need to add the json tokenisers for our model
+
