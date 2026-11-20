@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: launch_node.sh <name> <gpu> <port> <meta_port> <peer_url> [model]
+# Usage: launch.sh <name> <gpu> <port> <meta_port> <peer_url> [model]
 set -euo pipefail
 
 N=$1; G=$2; PORT=$3; META_PORT=$4; PEER_URL=$5
