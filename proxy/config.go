@@ -35,7 +35,6 @@ func (n NodeConfig) toNode() (node.Node, error) {
 }
 
 type HealthConfig struct {
-	WaitingWeight        float64 `json:"waiting_weight"`
 	LoadedThreshold      float64 `json:"loaded_threshold"`
 	TokenLoadedThreshold int64   `json:"token_loaded_threshold"` // in-flight tokens above which a node is loaded; 0 = disabled
 }
@@ -95,9 +94,6 @@ func loadConfig(path string) (*Config, error) {
 	if len(cfg.Nodes) == 0 {
 		return nil, fmt.Errorf("config must list at least one node")
 	}
-	if cfg.Health.WaitingWeight == 0 {
-		cfg.Health.WaitingWeight = 1.0
-	}
 	if cfg.Health.LoadedThreshold <= 0 {
 		cfg.Health.LoadedThreshold = 8
 	}
@@ -133,7 +129,6 @@ func (cfg *Config) nodes() ([]node.Node, error) {
 
 func (cfg *Config) healthConfig() health.Config {
 	return health.Config{
-		WaitingWeight:        cfg.Health.WaitingWeight,
 		LoadedThreshold:      cfg.Health.LoadedThreshold,
 		TokenLoadedThreshold: cfg.Health.TokenLoadedThreshold,
 	}

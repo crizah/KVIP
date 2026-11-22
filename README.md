@@ -42,7 +42,7 @@ You will need to set up the `config.json` to register the used model in `models`
 `loaded = (Tokens >= token_loaded_threshold) || (running + waiting_weight × waiting > loaded_threshold)`
 Where `loaded_threshold` is set to `8` to appropriately corresponse to `80%` node saturation.
 
-We derived these values from our experiments, the code for that is a on the way. The `pull_threshold` under each model is also derived experimentally, the code for that exists in `phase-0` with `sweep.py`.
+We derived these values from our experiments with `phase-1/measure_load.py`. The `pull_threshold` under each model is also derived experimentally, the code for that exists in `phase-0` with `sweep.py`.
 Make sure the `router` is set to `kv`
 
 You have to build the binary with `CGO_LDFLAGS="-L./proxy/binary"` along with the path to your config json file 
@@ -454,3 +454,5 @@ Formula: loaded = (Tokens >= 20,000) OR (running + 2×waiting >= 8)
 ```
 CGO_LDFLAGS="-L./binary" go build -o binary/proxy . 2>&1
 CGO_LDFLAGS="-L./proxy/binary" LD_LIBRARY_PATH=./proxy/binary CONFIG_PATH=config.json ./proxy/binary/proxy-->
+
+docker run -d --name nodeA --network kvnet --gpus device=6 --shm-size=16g --ulimit memlock=-1 --cap-add NET_ADMIN --device-read-bps /dev/md0:750mb --device-write-bps /dev/md0:750mb -v $HOME/Naween/shaizah/kv-cache:/root/kv-cache -v $HOME/Naween/shaizah/models:/models -e CUDA_MPS_PIPE_DIRECTORY=/tmp/mps -e CUDA_MPS_LOG_DIRECTORY=/tmp/mps-log -e CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=25 -e UCX_NET_DEVICES=eth0 -e UCX_TLS=tcp lmsysorg/sglang:v0.5.19-cu129 sleep infinity

@@ -49,23 +49,21 @@ const staleAfter = 30 * time.Second
 
 // Config holds the knobs for the load score.
 // A node is marked StatusLoaded when EITHER:
-//   - running + WaitingWeight×waiting > LoadedThreshold  (catches short prefixes with many batched reqs)
-//   - in-flight tokens >= TokenLoadedThreshold           (catches long prefixes where few reqs dominate)
+//   - running > LoadedThreshold                (catches short prefixes with many concurrent reqs)
+//   - in-flight tokens >= TokenLoadedThreshold (catches long prefixes where few reqs dominate)
 type Config struct {
-	WaitingWeight         float64
 	LoadedThreshold       float64
 	TokenLoadedThreshold  int64
 }
 
-func loadScore(running, waiting int64, waitingWeight float64) float64 {
-	return float64(running) + waitingWeight*float64(waiting)
+func loadScore(running int64) float64 {
+	return float64(running)
 }
 
 type HealthTable struct {
 	mx              sync.RWMutex
 	table           map[string]*NodeInfo
 	nodes           []node.Node
-	waitingWeight   float64
 	loadedThreshold      float64
 	tokenLoadedThreshold int64
 }
@@ -95,7 +93,6 @@ func NewHealthTable(nodes []node.Node, cfg Config) *HealthTable {
 	return &HealthTable{
 		table:                t,
 		nodes:                nodes,
-		waitingWeight:        cfg.WaitingWeight,
 		loadedThreshold:      cfg.LoadedThreshold,
 		tokenLoadedThreshold: cfg.TokenLoadedThreshold,
 	}
@@ -157,7 +154,7 @@ func (table *HealthTable) record(node string, stat *LoadStat) {
 	info.Tokens = stat.Tokens
 	info.MaxTokens = stat.MaxTokens
 	info.Status = StatusHealthy
-	score := loadScore(stat.RunningReqs, stat.WaitingReqs, table.waitingWeight)
+	score := loadScore(stat.RunningReqs)
 	if score > table.loadedThreshold {
 		info.Status = StatusLoaded
 	}
@@ -223,8 +220,8 @@ func (table *HealthTable) GetHealthyNodes(ctx context.Context) AvailableNodes {
 	}
 
 	slices.SortFunc(sorted, func(a, b NodeInfo) int {
-		scoreA := loadScore(a.RunningReqs, a.WaitingReqs, table.waitingWeight)
-		scoreB := loadScore(b.RunningReqs, b.WaitingReqs, table.waitingWeight)
+		scoreA := loadScore(a.RunningReqs)
+		scoreB := loadScore(b.RunningReqs)
 		return cmp.Compare(scoreA, scoreB)
 	})
 
