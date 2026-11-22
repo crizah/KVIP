@@ -40,11 +40,13 @@ You will need the appropriate libtokenizer binary for the architecture of your m
 
 You will need to set up the `config.json` to register the used model in `models` and mention it in the field `model`, register all the nodes in `nodes` and setup the `health` section with the appropriate constants. The constants determine our load balancing decisions for when we consider a node loaded. 
 `loaded = (Tokens >= token_loaded_threshold) || (running + waiting_weight × waiting > loaded_threshold)`
-Make sure the `router` is set to `kv`
+Where `loaded_threshold` is set to `8` to appropriately corresponse to `80%` node saturation.
 
 We derived these values from our experiments, the code for that is a on the way. The `pull_threshold` under each model is also derived experimentally, the code for that exists in `phase-0` with `sweep.py`.
+Make sure the `router` is set to `kv`
 
 You have to build the binary with `CGO_LDFLAGS="-L./proxy/binary"` along with the path to your config json file 
+
 
 #### Agent
 You will need to fill in the rest of the config values `model_path` and leave the rest of the defaults
