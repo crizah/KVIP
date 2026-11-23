@@ -220,9 +220,10 @@ func (table *HealthTable) GetHealthyNodes(ctx context.Context) AvailableNodes {
 	}
 
 	slices.SortFunc(sorted, func(a, b NodeInfo) int {
-		scoreA := loadScore(a.RunningReqs)
-		scoreB := loadScore(b.RunningReqs)
-		return cmp.Compare(scoreA, scoreB)
+		if a.Tokens != b.Tokens {
+			return cmp.Compare(a.Tokens, b.Tokens)
+		}
+		return cmp.Compare(a.RunningReqs, b.RunningReqs)
 	})
 
 	return AvailableNodes{SortedNodes: sorted, NodesMap: nodesMap}
